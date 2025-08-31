@@ -9,8 +9,7 @@ use WP_CLI\Utils;
 const WP_PLUGIN_DIR = 'wp-content/plugins';
 const FILE_CHECKSUM_FAILURE = 'Checksum does not match';
 const FILE_DOWNLOAD_FAILURE = 'Failed to download file';
-const FILE_MISSING_LOCAL_FAILURE = 'File doesn\'t exist';
-const FILE_MISSING_OFFICIAL_FAILURE = 'Official file is missing';
+const FILE_MISSING_FAILURE = 'File doesn\'t exist';
 const FILE_DIFF_FAILURE = 'Differences found';
 
 /**
@@ -286,7 +285,7 @@ class VerifyChecksumDiffs extends WP_CLI_Command
 						$failed_files[$plugin_slug] = [];
 					}
 
-					$failed_files[$plugin_slug]['other'][$manifest_file] = FILE_MISSING_LOCAL_FAILURE;
+					$failed_files[$plugin_slug]['other'][$manifest_file] = FILE_MISSING_FAILURE;
 					$this->log("File is missing {$local_file}", 'r');
 				}
 			}
@@ -360,12 +359,6 @@ class VerifyChecksumDiffs extends WP_CLI_Command
 			$official_file_path = "{$official_dir}/{$file}";
 			$local_file_path = $local_dir ? "{$local_dir}/{$file}" : $file;
 
-			if (!file_exists($official_file_path)) {
-				$failed_files[$local_file_path] = FILE_MISSING_OFFICIAL_FAILURE;
-			}
-			if (!file_exists($local_file_path)) {
-				$failed_files[$local_file_path] = FILE_MISSING_LOCAL_FAILURE;
-			}
 
 			// Use `diff -q -bB` to quickly check for differences, ignoring whitespace.
 			// The output is suppressed, we only care about the return code.
@@ -430,7 +423,7 @@ class VerifyChecksumDiffs extends WP_CLI_Command
 			return;
 		}
 
-		WP_CLI::success('All failures were on the ignore list. No action needed.');
+		WP_CLI::success('All files passed verification.');
 	}
 
 	/**
