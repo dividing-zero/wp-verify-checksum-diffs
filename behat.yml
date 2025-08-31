@@ -1,7 +1,15 @@
 default:
+  autoload:
+    - "%paths.base%/features/bootstrap"
   suites:
     default:
-      contexts:
-        - WP_CLI\Tests\Context\FeatureContext
       paths:
-        - features
+        - "%paths.base%/features"
+      contexts:
+        - FeatureContext
+        - WP_CLI\Tests\Context\FeatureContext
+
+require:
+  - vendor/autoload.php
+  - vendor/wp-cli/core-command/features/bootstrap/FeatureContext.php
+  - vendor/wp-cli/extension-command/features/bootstrap/FeatureContext.php
