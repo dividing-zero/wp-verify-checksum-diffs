@@ -385,7 +385,7 @@ class VerifyChecksumDiffs extends WP_CLI_Command
 
 		// Log skipped plugins
 		if (!empty($this->skipped_plugins)) {
-			WP_CLI::warning('Checks were skipped for the following plugins:');
+			$this->log('Checks were skipped for the following plugins:', 'y');
 			foreach ($this->skipped_plugins as $plugin) {
 				$this->log($plugin, 'y');
 			}
@@ -393,7 +393,7 @@ class VerifyChecksumDiffs extends WP_CLI_Command
 
 		// Log failed files
 		if (!empty($this->failed_files)) {
-			WP_CLI::warning('Checks failed for the following files:');
+			$this->log('Checks failed for the following files:', 'r');
 			foreach ($this->failed_files as $base_file => $message) {
 				if ($this->is_ignored($base_file)) {
 					$this->log("{$base_file} ({$message}, ignored)", 'y');
@@ -443,10 +443,6 @@ class VerifyChecksumDiffs extends WP_CLI_Command
 			$message = WP_CLI::colorize("%{$color}{$message}%n");
 		}
 		WP_CLI::log($message);
-
-		// Force immediate output in all environments
-		@ob_flush();
-		@flush();
 	}
 
 	/**
