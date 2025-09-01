@@ -139,16 +139,10 @@ class VerifyChecksumDiffs extends WP_CLI_Command
 		$failed_files = ['checksum' => [], 'other' => []];
 
 		// Run the command with `launch` to display the fully formatted output.
-		WP_CLI::runcommand('core verify-checksums', ['launch' => true, 'exit_error' => false]);
+		$this->run_command('core verify-checksums', ['launch' => true], true);
 
 		// Run again with `return` to capture the output for processing.
-		$result = WP_CLI::runcommand('core verify-checksums', ['return' => 'all', 'exit_error' => false]);
-
-		// Handle errors for reasons other than checksum failures since we're not exiting on error
-		if ($result->return_code > 1) {
-			WP_CLI::error('Could not verify core checksums due to a fatal error.');
-			return;
-		}
+		$result = $this->run_command('core verify-checksums', ['return' => 'all'], true);
 
 		// Iterate over each line and extract file paths
 		$lines = explode("\n", $result->stderr);
@@ -178,7 +172,7 @@ class VerifyChecksumDiffs extends WP_CLI_Command
 	protected function diff_core_files($files)
 	{
 		// Get the current WordPress version
-		$wp_version = WP_CLI::runcommand('core version', ['return' => 'all']);
+		$wp_version = $this->run_command('core version', ['return' => 'all']);
 		$wp_version = trim($wp_version->stdout);
 
 		// Download the official WordPress core files
@@ -186,7 +180,7 @@ class VerifyChecksumDiffs extends WP_CLI_Command
 		$official_path = "{$this->work_dir}/official_core";
 		$wp_version_escaped = escapeshellarg($wp_version);
 		$official_path_escaped = escapeshellarg($official_path);
-		WP_CLI::runcommand("core download --version={$wp_version_escaped} --path={$official_path_escaped} --force", ['return' => 'all']);
+		$this->run_command("core download --version={$wp_version_escaped} --path={$official_path_escaped} --force", ['return' => 'all']);
 
 		// Compare files passed in with official files
 		$failed_files = $this->diff_files($files, $official_path);
@@ -206,16 +200,10 @@ class VerifyChecksumDiffs extends WP_CLI_Command
 		$failed_files = [];
 
 		// Run the command with `launch` to display the fully formatted output.
-		WP_CLI::runcommand('plugin verify-checksums --all', ['launch' => true, 'exit_error' => false]);
+		$this->run_command('plugin verify-checksums --all', ['launch' => true], true);
 
 		// Run again with `return` to capture the output for processing.
-		$result = WP_CLI::runcommand('plugin verify-checksums --all --format=json', ['return' => 'all', 'exit_error' => false]);
-
-		// Handle errors for reasons other than checksum failures since we're not exiting on error
-		if ($result->return_code > 1) {
-			WP_CLI::error('Could not verify plugin checksums due to a fatal error.');
-			return;
-		}
+		$result = $this->run_command('plugin verify-checksums --all --format=json', ['return' => 'all'], true);
 
 		// Parse stderr for skipped plugins
 		$stderr_lines = explode("\n", $result->stderr);
@@ -244,7 +232,7 @@ class VerifyChecksumDiffs extends WP_CLI_Command
 
 		// Now check for missing files for all plugins using their checksum manifests
 		$this->log("Checking for missing plugin files...");
-		$plugin_list_result = WP_CLI::runcommand('plugin list --format=json', ['return' => 'all']);
+		$plugin_list_result = $this->run_command('plugin list --format=json', ['return' => 'all']);
 		$plugins = json_decode($plugin_list_result->stdout, true);
 
 		foreach ($plugins as $plugin) {
@@ -305,7 +293,7 @@ class VerifyChecksumDiffs extends WP_CLI_Command
 	protected function diff_plugin_files($files, $plugin_slug)
 	{
 		// Get the plugin version
-		$plugin_version = WP_CLI::runcommand("plugin get {$plugin_slug} --field=version", ['return' => 'all']);
+		$plugin_version = $this->run_command("plugin get {$plugin_slug} --field=version", ['return' => 'all']);
 		$plugin_version = trim($plugin_version->stdout);
 
 		// Download the official plugin files
@@ -455,6 +443,38 @@ class VerifyChecksumDiffs extends WP_CLI_Command
 			$message = WP_CLI::colorize("%{$color}{$message}%n");
 		}
 		WP_CLI::log($message);
+	}
+
+	/**
+	 * Run a WP-CLI command and handle errors, since WP CLI doesn't report issues such as "out of memory" on its own.
+	 * Optionally suppress error code 1 if desired (for commands like verify-checksums that return 1 on checksum failures).
+	 *
+	 * @param string $command
+	 * @param array $options
+	 * @param boolean $surpress_error_code_1 Pass true to suppress error code 1
+	 * @return object
+	 */
+	private function run_command($command, $options = [], $surpress_error_code_1 = false)
+	{
+		$options = array_merge($options, ['exit_error' => false]);
+
+		$result = WP_CLI::runcommand($command, $options);
+
+		if (isset($result->return_code)) {
+			if ($surpress_error_code_1 === true && $result->return_code === 1) {
+				return $result;
+			}
+			else if ($result->return_code > 1) {
+				$message = '';
+				if (!empty($result->stderr)) {
+					$message .= trim($result->stderr);
+				}
+				$message .= " (exit code: {$result->return_code})";
+				WP_CLI::error($message, $result->return_code);
+			}
+		}
+
+		return $result;
 	}
 
 	/**
