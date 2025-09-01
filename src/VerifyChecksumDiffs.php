@@ -443,6 +443,10 @@ class VerifyChecksumDiffs extends WP_CLI_Command
 			$message = WP_CLI::colorize("%{$color}{$message}%n");
 		}
 		WP_CLI::log($message);
+
+		// Force immediate output in all environments
+		@ob_flush();
+		@flush();
 	}
 
 	/**
