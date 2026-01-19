@@ -307,7 +307,9 @@ class VerifyChecksumDiffs extends WP_CLI_Command
 
 		// Handle download errors
 		if (200 !== $response->status_code) {
-			WP_CLI::error("Failed to download plugin {$plugin_slug} (HTTP status: {$response->status_code}).");
+			WP_CLI::warning("Failed to download plugin {$plugin_slug} (HTTP status: {$response->status_code}), skipping.");
+			$this->skipped_plugins[] = $plugin_slug;
+			return [];
 		}
 
 		// Extract the downloaded files
